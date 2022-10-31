@@ -34,10 +34,13 @@ class WebSocketClient {
       onOpen(wsc, e);
     });
     wsc.#socket.addEventListener("message", (e) => {
-      const onEventList = wsc.eventMap.get(e.data[wsc.#typePrefix]);
+      const parsedData = JSON.parse(e.data);
+      const messageType = parsedData[wsc.#typePrefix];
+      const onEventList = wsc.eventMap.get(messageType);
       if (onEventList) {
+        const messageData = parsedData[wsc.#dataPrefix];
         onEventList.forEach((onEvent) => {
-          onEvent(e.data[wsc.#dataPrefix], e);
+          onEvent(messageData, e);
         });
       }
     });
