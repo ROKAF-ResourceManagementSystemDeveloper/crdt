@@ -19,7 +19,7 @@ export default class VectorClock {
     this.#vector.set(sid, clock);
   }
   update(sid: number) {
-    const newClock = this.#vector.get(sid) + 1;
+    const newClock = (this.#vector.get(sid) ?? 0) + 1;
     this.#vector.set(sid, newClock);
   }
 
@@ -32,7 +32,7 @@ export default class VectorClock {
     }
   }
 
-  sum() {
+  get sum() {
     let sum = 0;
     for (const clock of this.#vector.values()) {
       sum += clock;
