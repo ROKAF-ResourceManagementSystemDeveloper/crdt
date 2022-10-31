@@ -31,4 +31,12 @@ export default class VectorClock {
       }
     }
   }
+
+  sum() {
+    let sum = 0;
+    for (const clock of this.#vector.values()) {
+      sum += clock;
+    }
+    return sum;
+  }
 }
