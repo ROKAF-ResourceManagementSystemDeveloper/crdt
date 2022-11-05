@@ -1,9 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"ugboss/crdt/api/v1/handler"
+	"ugboss/crdt/pkg/hub/standalone"
 
+	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -15,7 +19,8 @@ func main() {
 }
 
 const (
-	keyTest = "test"
+	keyHost = "host"
+	keyPort = "port"
 )
 
 func NewCmd() *cobra.Command {
@@ -30,7 +35,8 @@ func NewCmd() *cobra.Command {
 	}
 
 	flags := cmd.Flags()
-	flags.String(keyTest, "default", "test env binding")
+	flags.String(keyHost, "0.0.0.0", "addr to listen reqeust")
+	flags.String(keyPort, "8080", "port to listen reqeust")
 	vp.BindPFlags(flags)
 
 	return cmd
@@ -43,8 +49,12 @@ func newViper() *viper.Viper {
 	return vp
 }
 
-func runServer(vp *viper.Viper) error {
-	fmt.Println("init project!")
-	fmt.Printf("CRDT_BACKEND_TEST: %s\n", vp.GetString(keyTest))
-	return nil
+func runServer(vp *viper.Viper) error {	
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	hub := standalone.NewHub(ctx)
+
+	r := gin.Default()
+	r.GET("/ws", handler.WsHandler(hub))
+	return r.Run(fmt.Sprintf("%s:%s", vp.GetString(keyHost), vp.GetString(keyPort)))
 }
