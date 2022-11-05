@@ -2,71 +2,82 @@ package standalone
 
 import (
 	"context"
-	"fmt"
 	"ugboss/crdt/pkg/hub"
 )
 
-type Hub struct {
-	clients    map[string]hub.Client
-	register   chan hub.Client
-	unregister chan hub.Client
-	broadcast  chan []byte
+type clientOffset struct {
+	cli    hub.Client
+	offset int
 }
 
-var _ hub.Hub = &Hub{}
+type memoryHub struct {
+	clients    map[string]*clientOffset
+	messages   []*hub.Message
+	register   chan *clientOffset
+	unregister chan hub.Client
+	broadcast  chan *hub.Message
+}
+
+var _ hub.Hub = &memoryHub{}
 
 func NewHub(ctx context.Context) hub.Hub {
-	hub := &Hub{
-		clients: make(map[string]hub.Client),
-		register: make(chan hub.Client),
+	hub := &memoryHub{
+		clients:    make(map[string]*clientOffset),
+		messages:   make([]*hub.Message, 0, 1024),
+		register:   make(chan *clientOffset),
 		unregister: make(chan hub.Client),
-		broadcast: make(chan []byte),
+		broadcast:  make(chan *hub.Message),
 	}
 	go hub.run(ctx)
 	return hub
 }
 
 // Register implements hub.Hub
-func (h *Hub) Register(cli hub.Client) error {
-	select {
-	case h.register <- cli:
+func (h *memoryHub) Register(cli hub.Client, offset int) (hub.Broadcast, error) {
+	h.register <- &clientOffset{cli, offset}
+	return func(msg []byte) error {
+		h.broadcast <- &hub.Message{
+			ClientID: cli.Identifier(),
+			Data:     msg,
+		}
 		return nil
-	default:
-		return fmt.Errorf("register channel is busy")
-	}
+	}, nil
 }
 
 // Unregister implements hub.Hub
-func (h *Hub) Unregister(cli hub.Client) {
-	// hub must exectue unregister no matter how long it takes
+func (h *memoryHub) Unregister(cli hub.Client) {
 	h.unregister <- cli
 }
 
-// Broadcast implements hub.Hub
-func (h *Hub) Broadcast(msg []byte) {
-	h.broadcast <- msg
-}
-
-func (h *Hub) run(ctx context.Context) {
+func (h *memoryHub) run(ctx context.Context) {
 	for {
 		select {
-		case client := <- h.register:
-			h.clients[client.Identifier()] = client
-		case client := <- h.unregister:
+		case clientOffset := <-h.register:
+			h.clients[clientOffset.cli.Identifier()] = clientOffset
+		case client := <-h.unregister:
 			if _, ok := h.clients[client.Identifier()]; ok {
 				close(client.Send())
 				delete(h.clients, client.Identifier())
 			}
-		case msg := <- h.broadcast:
-			for _, client := range h.clients {
-				select {
-				case client.Send() <- msg:
-				default:
-					// TODO
-				}
-			}
+		case msg := <-h.broadcast:
+			msg.Offset = len(h.messages)
+			h.messages = append(h.messages, msg)
 		case <-ctx.Done():
 			return
+		default:
+			for _, client := range h.clients {
+				readUntil := len(h.messages)
+				if client.offset+100 < readUntil {
+					readUntil = client.offset + 100
+				}
+				msgs := h.messages[client.offset:readUntil]
+				for _, msg := range msgs {
+					if client.cli.Identifier() != msg.ClientID {
+						client.cli.Send() <- msg
+					}
+				}
+				client.offset += len(msgs)
+			}
 		}
 	}
 }
