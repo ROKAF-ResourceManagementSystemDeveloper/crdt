@@ -14,7 +14,7 @@ fi
 
 if [ "${1-}" = "run" ]; then
     docker run --rm \
-    -e CRDT_BACKEND_TEST="from container" \
+    -p "${2}:8080" \
     "${image}:${version}"
     exit 0
 fi
