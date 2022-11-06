@@ -4,6 +4,7 @@ interface WebSocketConnectOption {
   typePrefix?: string;
   dataPrefix?: string;
   onOpen?: OnOpenCallback;
+  customWebsocket?: new () => any;
 }
 class WebSocketClient {
   #url: string = "";
@@ -28,12 +29,16 @@ class WebSocketClient {
     wsc.#url = url;
     wsc.#dataPrefix = dataPrefix;
     wsc.#typePrefix = typePrefix;
-    wsc.#socket = new WebSocket(url);
+    wsc.#socket =
+      options.customWebsocket === undefined
+        ? new WebSocket(url)
+        : new options.customWebsocket();
 
     wsc.#socket.addEventListener("open", (e) => {
       onOpen(wsc, e);
     });
     wsc.#socket.addEventListener("message", (e) => {
+      e.type;
       const parsedData = JSON.parse(e.data);
       const messageType = parsedData[wsc.#typePrefix];
       const onEventList = wsc.eventMap.get(messageType);
@@ -44,6 +49,8 @@ class WebSocketClient {
         });
       }
     });
+
+    return wsc;
   }
 
   eventMap = new Map<string, OnMessageCallback[]>();
