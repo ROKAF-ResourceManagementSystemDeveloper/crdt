@@ -1,7 +1,5 @@
 <script lang="ts">
+  import Layout from "./components/layout/Layout.svelte";
 </script>
 
-<main>CRDT</main>
-
-<style>
-</style>
+<Layout />
