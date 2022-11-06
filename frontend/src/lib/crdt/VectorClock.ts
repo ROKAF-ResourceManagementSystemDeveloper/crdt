@@ -1,3 +1,5 @@
+export type SerializedVectorClock = { [key: number]: number };
+
 export default class VectorClock {
   #vector = new Map<number, number>();
 
@@ -6,16 +8,23 @@ export default class VectorClock {
     newVc.#vector = new Map(vc.#vector);
     return newVc;
   }
-  static fromMap(map: Map<number, number>) {
+  static fromSerializable(entries: SerializedVectorClock) {
     const newVc = new VectorClock();
-    newVc.#vector = new Map(map);
+    newVc.#vector = new Map(Object.entries(entries)) as unknown as Map<
+      number,
+      number
+    >;
     return newVc;
+  }
+  toSerializable(): SerializedVectorClock {
+    return Object.fromEntries(this.#vector);
   }
 
   get(sid: number) {
     return this.#vector.get(sid);
   }
-  set(sid: number, clock: number) {
+
+  set(sid: number, clock: number): void {
     this.#vector.set(sid, clock);
   }
   update(sid: number) {
