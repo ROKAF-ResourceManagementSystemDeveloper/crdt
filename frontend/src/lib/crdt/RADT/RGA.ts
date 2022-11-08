@@ -64,6 +64,18 @@ class RGA {
     return list;
   }
 
+  text() {
+    let currentNode = this.#head;
+    let text = "";
+    while (currentNode.link !== null) {
+      currentNode = currentNode.link;
+      if (!isTombstone(currentNode)) {
+        text += currentNode.data;
+      }
+    }
+    return text;
+  }
+
   localInsert(prevS4: S4Vector, s4: S4Vector, data: any) {
     const prevNode = this.#map.get(prevS4.key);
     if (isTombstone(prevNode) && prevS4.key !== RGA.HEAD_S4.key) {
