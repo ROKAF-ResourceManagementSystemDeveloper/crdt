@@ -1,7 +1,6 @@
 <script lang="ts">
+  import Layout from "./components/layout/Layout.svelte";
+  import TestPage from "./pages/Test/TestPage.svelte";
 </script>
 
-<main>CRDT</main>
-
-<style>
-</style>
+<Layout><TestPage /></Layout>
