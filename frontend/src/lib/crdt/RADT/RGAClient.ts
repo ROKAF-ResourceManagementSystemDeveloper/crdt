@@ -28,7 +28,7 @@ export default class RGAClient {
 
   constructor(sid: number) {
     this.sid = sid;
-    this.wsc = WebSocketClient.connect("_", {
+    this.wsc = WebSocketClient.connect("_" /* localhost:8082/ws?offset=0 */, {
       customWebsocket: FakeWebSocket,
       onOpen: (wsc, e) => {
         wsc.on("insert", (data: InsertMessageData) => {
@@ -40,21 +40,21 @@ export default class RGAClient {
           }
           this.vc.merge(sentVC);
           this.rga.remoteInsert(prevS4, newS4, data.data);
-          this.onChange(this.rga.getAll());
+          this.onChange(this.rga.text());
         });
         wsc.on("delete", (data: DeleteMessageData) => {
           const sentVC = VectorClock.fromSerializable(data.vc);
           const targetS4 = S4Vector.fromSerializable(data.s4);
           this.vc.merge(sentVC);
           this.rga.remoteDelete(targetS4);
-          this.onChange(this.rga.getAll());
+          this.onChange(this.rga.text());
         });
         wsc.on("update", (data: UpdateMessageData) => {
           const sentVC = VectorClock.fromSerializable(data.vc);
           const targetS4 = S4Vector.fromSerializable(data.s4);
           this.vc.merge(sentVC);
           this.rga.remoteUpdate(targetS4, data.data);
-          this.onChange(this.rga.getAll());
+          this.onChange(this.rga.text());
         });
       },
     });
@@ -76,7 +76,7 @@ export default class RGAClient {
       vc: this.vc.toSerializable(),
     };
     this.wsc.send("insert", dataToSend);
-    this.onChange(this.rga.getAll());
+    this.onChange(this.rga.text());
   }
 
   delete(offset: number) {
@@ -91,7 +91,7 @@ export default class RGAClient {
       vc: this.vc.toSerializable(),
     };
     this.wsc.send("delete", dataToSend);
-    this.onChange(this.rga.getAll());
+    this.onChange(this.rga.text());
   }
 
   update(offset: number, data: any) {
@@ -107,8 +107,8 @@ export default class RGAClient {
       data: data,
     };
     this.wsc.send("update", dataToSend);
-    this.onChange(this.rga.getAll());
+    this.onChange(this.rga.text());
   }
 
-  onChange: (list: RGANode[]) => void;
+  onChange: (list: string) => void;
 }
