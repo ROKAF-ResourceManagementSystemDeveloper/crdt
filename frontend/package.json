@@ -25,6 +25,7 @@
   "dependencies": {
     "@tiptap/core": "^2.0.0-beta.202",
     "@tiptap/starter-kit": "^2.0.0-beta.202",
-    "@unocss/reset": "^0.45.30"
+    "@unocss/reset": "^0.45.30",
+    "prosemirror-transform": "^1.1.0"
   }
 }

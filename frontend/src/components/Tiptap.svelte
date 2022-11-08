@@ -1,22 +1,71 @@
 <script lang="ts">
-  import { onMount, onDestroy } from "svelte";
+  import { onMount, onDestroy, createEventDispatcher } from "svelte";
   import { Editor } from "@tiptap/core";
   import StarterKit from "@tiptap/starter-kit";
+  import { ReplaceStep } from "prosemirror-transform";
 
   let element;
-  let editor;
+  let editor: Editor;
+  export let text;
+
+  interface TiptapEvent {
+    delete: {
+      offset: number;
+    };
+    insert: {
+      offset: number;
+      data: string;
+    };
+  }
+  const dispatch = createEventDispatcher<TiptapEvent>();
 
   onMount(() => {
     editor = new Editor({
       element: element,
       extensions: [StarterKit],
-      content: "<p>Hello World! 🌍️ </p>",
+      content: text,
       onTransaction: () => {
         // force re-render so `editor.isActive` works as expected
         editor = editor;
       },
+      onUpdate: ({ transaction }) => {
+        transaction.steps.forEach((step) => {
+          if (step instanceof ReplaceStep) {
+            console.log("replace");
+            const { from, to, slice } = step;
+
+            /** Deletion */
+            if (from < to) {
+              for (let i = to - 1; i >= from; i--) {
+                dispatch("delete", {
+                  offset: i,
+                });
+              }
+            }
+
+            /** Insertion */
+            const { content } = slice;
+            content.forEach((node) => {
+              [...node.text].forEach((char, index) => {
+                dispatch("insert", {
+                  offset: from + index - 1,
+                  data: char,
+                });
+              });
+            });
+          }
+        });
+      },
     });
   });
+
+  function setContent(text) {
+    if (editor) {
+      editor.commands.setContent(text);
+    }
+  }
+
+  $: setContent(text);
 
   onDestroy(() => {
     if (editor) {
@@ -46,7 +95,7 @@
   </button>
 {/if} -->
 
-<div bind:this={element} />
+<div bind:this={element} class="w-20em b-black b-solid b-1" />
 
 <style>
   button.active {
